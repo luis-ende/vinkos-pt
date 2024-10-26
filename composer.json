@@ -1,13 +1,14 @@
 {
     "name": "laravel/laravel",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Proyecto prueba técnica de desarollo VinkOS.",
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
         "php": "^8.2",
         "laravel/framework": "^11.9",
         "laravel/tinker": "^2.9",
+        "league/flysystem-sftp-v3": "^3.29",
         "maatwebsite/excel": "^3.1"
     },
     "require-dev": {

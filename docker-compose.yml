@@ -47,6 +47,15 @@ services:
                 - '-p${DB_PASSWORD}'
             retries: 3
             timeout: 5s
+
+    mailpit:
+        image: 'axllent/mailpit'
+        ports:
+            - '8025:8025'      # Web interface
+            - '1025:1025'      # SMTP service
+        networks:
+            - sail
+
 networks:
     sail:
         driver: bridge

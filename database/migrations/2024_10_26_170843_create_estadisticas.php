@@ -11,26 +11,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('estadistica', function (Blueprint $table) {
+        Schema::create('estadisticas', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('visitante_id');
-            $table->string('jk');
-            $table->string('badmail');
-            $table->string('baja', 4);
-            $table->dateTime('fecha_envio');
-            $table->dateTime('fecha_open');
-            $table->unsignedInteger('opens');
-            $table->unsignedInteger('opens_virales');
-            $table->dateTime('fecha_click');
-            $table->unsignedInteger('clicks');
-            $table->unsignedInteger('clicks_virales');
-            $table->unsignedInteger('links');
-            $table->ipAddress('ips');
-            $table->string('navegadores');
-            $table->string('plataformas');
+            $table->string('email');
+            $table->string('jyv')->nullable();
+            $table->string('badmail', 30)->nullable();
+            $table->string('baja', 4)->nullable();
+            $table->dateTime('fecha_envio')->nullable();
+            $table->dateTime('fecha_open')->nullable();
+            $table->unsignedInteger('opens')->nullable();
+            $table->unsignedInteger('opens_virales')->nullable();
+            $table->dateTime('fecha_click')->nullable();
+            $table->unsignedInteger('clicks')->nullable();
+            $table->unsignedInteger('clicks_virales')->nullable();
+            $table->string('links', 30)->nullable();
+            $table->string('ips')->nullable();
+            $table->string('navegadores')->nullable();
+            $table->string('plataformas')->nullable();
             $table->timestamps();
 
-            $table->foreign('visitante_id')->references('id')->on('visitante');
+            $table->index('email');
         });
     }
 
@@ -39,6 +39,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('estadistica');
+        Schema::dropIfExists('estadisticas');
     }
 };

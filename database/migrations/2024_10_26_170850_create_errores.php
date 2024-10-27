@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('errores', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('visitante_id');
             $table->unsignedBigInteger('bitacora_id');
+            $table->json('error_log');
 
             $table->foreign('bitacora_id')->references('id')->on('bitacoras');
             $table->timestamps();

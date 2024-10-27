@@ -13,9 +13,11 @@ return new class extends Migration
     {
         Schema::create('bitacoras', function (Blueprint $table) {
             $table->id();
-            $table->string('archivo');
+            $table->string('archivo', 100);
             $table->json('importacion_log');
             $table->timestamps();
+
+            $table->index('archivo');
         });
     }
 

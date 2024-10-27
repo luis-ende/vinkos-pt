@@ -1,66 +1,69 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# VinkOs Prueba técnica
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Requerimientos
 
-## About Laravel
+- Docker, Docker Compose
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Ambiente de desarrollo
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Para levantar el proyecto con sus dependencias (servidor web, base de datos) se incluye un archivo `docker-compose.yml` en
+el directorio raíz.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Utilizar [https://laravel.com/docs/11.x/sail](Laravel Sail) para levantar y correr el proyecto de manera más sencilla en modo local:
+- Generar las imágenes y levantar los contenedor: `./vendor/bin/sail up`
+  - Al levantar el ambiente de desarrollo por primera vez, ejecutar `./vendor/bin/sail artisan migrate` para generar las tablas en la base de datos
+- Detener contendores `./vendor/bin/sail stop`
+- Ejecutar comandos Artisan, por ejemplo: `./vendor/bin/sail artisan vinkos-pt:import-estadisticas`
+- Consultar documentación de Laravel Sail para más información sobre la herramienta
 
-## Learning Laravel
+## Componentes principales
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- **Scheduler** (`routes/console.php`). Tarea registrada para programar la ejecución del comando `vinkos-pt:import-visitantes` diariamente 
+a una hora específica. Para correr el scheduler en producción es necesario tener un cronjob configurado 
+(ejemplo: `* * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1`), como se indica en la documentación:
+  (https://laravel.com/docs/11.x/scheduling#running-the-scheduler)[https://laravel.com/docs/11.x/scheduling#running-the-scheduler]
+- **Comando ImportEstadisticas** (`app/Console/Commands/ImportEstadisticas.php`). Orquesta el proceso de ubicación y carga de los archivos 
+del repositorio fuente a la base de datos. Este comando es ejecutado por el componente Scheduler según la periodicidad establecida 
+(en este caso, diariamente). Más sobre [https://laravel.com/docs/11.x/artisan](creación y ejecución de comandos Artisan).
+- **Importador EstadisticasImport** (`app/Imports/EstadisticasImport.php`). Importa un archivo aplicando primero las reglas de validación 
+y transformaciones definidas en la clase. Más sobre [https://docs.laravel-excel.com/3.1/imports/](importaciones de archivos con Laravel Excel). 
+*Este componente también ofrece la funcionalidad para procesar importaciones en colas en caso de que sea necesario por una gran cantidad de datos* 
+- **Repositorios de almacenamiento *Storage***. Los storage (discs) son abstracciones que permiten cambiar dinámicamente las ubicaciones de los directorios
+  (ver `config/filesystems.php`). Para este proyecto se han creado los siguientes:
+    - `imports`: Apunta a una ubicación de prueba local con archivos .txt a importar, usado específicamente para pruebas del importador durante el desarrollo
+    - `sftp`: Apunta a la ubicación SFTP de los archivos en producción con archivos .txt a importar (requiere instalar la librería `league/flysystem-sftp-v3`, ver el archivo `composer.json` de este proyecto)
+    - `backups`: Apunta a la ubicación en donde se guardan los zip de los archivos importados
+- **Base de datos**. El proyecto está configurado (ver archivo `.env`) para funcionar con una base de datos MySql y su estructura se genera mediante migraciones de Laravel (ver `database/migrations`). 
+Las tablas principales requeridas por la importación son:
+  - `estadisticas`: Contiene los renglones importados de archivos .txt
+  - `visitantes`: Contiene información y totales acumulados por visitante
+  - `bitacoras`: Contiene información sobre los archivos importados, ejemplo: ![Bitacoras](docs/images/bitacoras_table.png)
+  - `errores` Contiene información sobre los errores generados en cada importación de la bitácora, ejemplo: ![Errores](docs/images/errores_table.png)
+- **Notificaciones**. Para notificar sobre eventos ocurridos durante las importaciones via E-mail (aunque es posible configurarlo para otros canales) 
+durante la importación se utiliza el componente (https://laravel.com/docs/11.x/notifications#mail-notifications)[Mail Notifications] 
+Ver carpeta `app/Notifications` con las notificaciones creadas para este proyecto 
+- **Log del sistema**. Los errores críticos a nivel general que ocurran durante el proceso de importanción se registran también por default
+  en el log de la aplicación (`storage/logs/laravel.log`)
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+![Componentes estructura](docs/images/componentes.png)
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Descripción del proceso de importación
 
-## Laravel Sponsors
+Punto de entrada del proceso de importación (ver `app/Console/Commands/ImportEstadisticas.php`).
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
-
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+1. Se obtienen las rutas de los archivos a importar del repositorio origen considerando el
+   formato de nombre `report_+consecutivo+.txt`
+2. Se procesan la importación de los archivos encontrados. Para cada archivo a importar:
+    - Se genera un error si el archivo no tiene el formato adecuado (CSV) al intentar leerlo
+    - El importador (ver `app/Imports/EstadisticasImport.php`) aplica primero las reglas de formato CSV y
+      de validación, si no se cumplen, se generan errores
+      y se detiene la importación del archivo para continuar con el siguiente. En caso de un error inesperado se
+      genera una entrada en la lista de errores del archivo y se intenta procesar el siguiente archivo
+    - El importador genera una entrada por cada renglón en la tabla `estadisticas`, para mayor eficiencia
+      en lotes de 1000 registros
+    - Una vez importados los renglones a la tabla de `estadisticas`, se generan los registros y totales en la
+      tabla de `visitantes`. Si el correo no se encuentra registrado, se crea un nuevo registro; si existe, se
+      actualizan `fecha_ultima_visita` y totales de visitas. La actualización/creación (upsert) se realiza en lotes
+    - Se genera una entrada en la bitácora (tabla bitacoras) con el resultado de la importación y los errores encontrados
+3. Al terminar la importación de los archivos, se genera un zip y se guarda en el storage `backups`
+4. Si el zip fue generado con éxito, se eliminan los archivos importados del directorio origen

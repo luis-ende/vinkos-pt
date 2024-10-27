@@ -45,6 +45,31 @@ return [
             'throw' => false,
         ],
 
+        'imports' => [
+            'driver' => 'local',
+            'root' => storage_path('app/imports'),
+            'throw' => false,
+        ],
+
+        'backups' => [
+            'driver' => 'local',
+            'root' => storage_path('app/etl/visitas/backups'),
+            'throw' => false,
+        ],
+
+        'sftp' => [
+            'driver' => 'sftp',
+            'host' => env('SFTP_HOST'),
+            'port' => env('SFTP_PORT', 22),
+            'username' => env('SFTP_USERNAME'),
+            'password' => env('SFTP_PASSWORD'),
+            'root' => env('SFTP_ROOT'),
+            'permPublic' => 0755,
+            'directoryPerm' => 0755,
+            'visibility' => 'public',
+            'timeout' => 30,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
